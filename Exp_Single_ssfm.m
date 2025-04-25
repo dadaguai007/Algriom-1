@@ -18,7 +18,8 @@ OFDM_generation;
 % 存储数据的位置信息
 PRE='SSFM_CSPR_';
 
-Button_save= 'off';
+Button_save= 'on';
+
 CSPR_NUM=10;
 
 % 装载数据保存模块
@@ -33,7 +34,7 @@ for i=length(CSPR_NUM)
     ds.filePath = strcat('Output\',Title);
     ds.createFolder();
     % 加入数据文件位置
-    Filename=strcat('D:\PhD\Project\单边带光发射机自适应偏压控制\Exp\ofdm_dd_ber_64G_18GBaud_20GBaud\Data\20240522_ofdm_64G_20G_SSB_BTB_ssb_ssfm_',num2str(CSPR_NUM(i)),'dBm\');
+    Filename=strcat('D:\PhD\Project\单边带光发射机自适应偏压控制\Exp\ofdm_dd_ber_64G_18GBaud_20GBaud\Data\20240522_ofdm_64G_20G_SSB_BTB_ssfm_',num2str(CSPR_NUM(i)),'dBm\');
     addpath(Filename)
     load('pd_inpower.mat')
     pre='ROP-';
@@ -90,13 +91,14 @@ for i=length(CSPR_NUM)
         % 创建变量
         Total=0;
         Num=0;
+        Receive.Button.Display='off';
         for Idx=1:length(Index_P)
             % 序列号
             Receive.Nr.squ_num=Idx;
             % 每次都是选取一段进行处理
             Receive.Nr.k=1;
             % 训练序列进行纠正
-            Receive.Nr.nTrainSym =  30;
+            Receive.Nr.nTrainSym =  100;
             % 重新生成 DSP 所需的 训练矩阵
             Receive.createReferenceSignal_matrix();
 

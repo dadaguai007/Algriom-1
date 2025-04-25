@@ -5,11 +5,12 @@ f1=40e3;
 f2=60e3;
 N=length(data)/(fs/f1);
 
+phi=0;
 % 创建dither信号
-VbQ_sin = Vdither*Creat_dither1(fs,f2,N*(f2/f1)).';
-VbI_sin = Vdither*Creat_dither1(fs,f1,N).';
-VbI_cos = Vdither*Creat_dither(fs,f1,N).';
-VbQ_cos = Vdither*Creat_dither(fs,f2,N*(f2/f1)).';
+VbQ_sin = Vdither*Creat_dither1(fs,f2,phi,N*(f2/f1)).';
+VbI_sin = Vdither*Creat_dither1(fs,f1,phi,N).';
+VbI_cos = Vdither*Creat_dither(fs,f1,phi,N).';
+VbQ_cos = Vdither*Creat_dither(fs,f2,phi,N*(f2/f1)).';
 
 
 
@@ -30,7 +31,7 @@ Q_beat=real(Rece_remove_dc).*VbQ_sin+imag(Rece_remove_dc).*VbQ_cos;
 E2=I_beat+Q_beat;
 
 pd_error=alpha*(E1+E2);
-
+% pd_error=alpha*(E2);
 % 消除串扰
 pd_current=ipd-pd_error;
 

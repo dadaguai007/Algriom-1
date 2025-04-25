@@ -19,7 +19,7 @@ OFDM_generation;
 PRE='SSFM_DSB_10dBm_Itera_Dither_Amp_';
 
 % 存储按钮
-Button_save= 'on';
+Button_save= 'off';
 
 Amp_NUM=300;
 % 装载数据保存模块
@@ -38,7 +38,8 @@ for i=1:length(Amp_NUM)
     addpath(Filename)
     load('pd_inpower.mat')
     pre='ROP-';
-    for j=1:length(pd_inpower)
+    %     for j=1:length(pd_inpower)
+    for j=12
         % 对输入光功率近似，取整数值
         power = sprintf('%.1f.mat', pd_inpower(j));
         % 读取输入数据
@@ -87,48 +88,61 @@ for i=1:length(Amp_NUM)
         [ber,num,L]=Receive.Direcct_Cal_BER(data_ofdm_Total);
 
         berTotal(j)=ber;
-        
+
         % 提取光电流
         Receive.Button.select_photocurrentSignal = 'on';
         % 同步
         [~,~,selectedPhotoCurrentSignal]=Receive.Synchronization(Rxsig);
         % 迭代算法
-        alpha=0.02;
+        alpha=0.002;
         ipd=selectedPhotoCurrentSignal;
-        % 迭代后的光电流
-        pd_current=iterative_Beat_Elimination(selectedPortionTotal,real(mean(selectedPortionTotal)),ipd,alpha,64e9,0.05);
+        for idx= 1:5
+            % 迭代后的光电流
+            pd_current=iterative_Beat_Elimination(selectedPortionTotal,mean(selectedPortionTotal),ipd,alpha,64e9,0.05);
 
-        % KK算法
-        [Rxsig_After,Dc]=Receive.Preprocessed_signal(pd_current);
-        % 数据分组
-        PhotoCurrentGroup=Receive.getGroup(Rxsig_After,Index_P);
-        
-        % 分组解码
-        % 创建变量
-        Total=0;
-        Num=0;
-        for Idx=1:length(Index_P)
-            % 序列号
-            Receive.Nr.squ_num=Idx;
-            % 每次都是选取一段进行处理
-            Receive.Nr.k=1;
-            % 训练序列进行纠正
-            Receive.Nr.nTrainSym =  30;
-            % 重新生成 DSP 所需的 训练矩阵
-            Receive.createReferenceSignal_matrix();
+            % KK算法
+            [Rxsig_After,Dc]=Receive.Preprocessed_signal(pd_current);
+            % 数据分组
+            PhotoCurrentGroup=Receive.getGroup(Rxsig_After,Index_P);
 
-            selectedPortion=Receive.selectSignal(Index_P,PhotoCurrentGroup);
-            % 均衡解码
-            [signal_ofdm_martix,data_ofdm_martix,Hf,data_ofdm] = Receive.OFDM_ExecuteDecoding(selectedPortion);
-            % 比特判决
-            [ber,num,L]=Receive.Direcct_Cal_BER(data_ofdm);
-            Num=Num+num;
-            Total=Total+L;
+
+            % 更新ipd
+            ipd=pd_current;
+            selectedPortionTotal=Rxsig_After;
+
+
+            % 分组解码
+            % 创建变量
+            Total=0;
+            Num=0;
+            Receive.Button.Display='off';
+            for Idx=1:length(Index_P)
+                % 序列号
+                Receive.Nr.squ_num=Idx;
+                % 每次都是选取一段进行处理
+                Receive.Nr.k=1;
+                % 训练序列进行纠正
+                Receive.Nr.nTrainSym =  30;
+                % 重新生成 DSP 所需的 训练矩阵
+                Receive.createReferenceSignal_matrix();
+
+                selectedPortion=Receive.selectSignal(Index_P,PhotoCurrentGroup);
+
+                % 均衡解码
+                [signal_ofdm_martix,data_ofdm_martix,Hf,data_ofdm] = Receive.OFDM_ExecuteDecoding(selectedPortion);
+                % 比特判决
+
+                [ber,num,L]=Receive.Direcct_Cal_BER(data_ofdm);
+                Num=Num+num;
+                Total=Total+L;
+
+            end
+            BER=Num/Total;
+            fprintf('Total Num of Errors = %d, BER = %1.7f\n',Num,BER);
+            BER_ALL(idx)=BER;
+
         end
-        BER=Num/Total;
-        fprintf('Total Num of Errors = %d, BER = %1.7f\n',Num,BER);
-        BER_ALL(j)=BER;
-
+        Itera_BER(j)=min(BER_ALL);
     end
 
     % 输入光功率
@@ -137,7 +151,7 @@ for i=1:length(Amp_NUM)
     % 是否进行存储
     if strcmp(Button_save,'on')
         ds.name='BER';
-        ds.data=BER_ALL;
+        ds.data=Itera_BER;
         ds.saveToMat();
 
 
@@ -162,6 +176,6 @@ Mat=[BER_ALL;berTotal];
 % LengendArrary=["100mv",...
 %     "200mv","300mv",...
 %     "400mv","500mv"];
-LengendArrary=["Group",...
-    "Total"];
+LengendArrary=["Algritom",...
+    "w/o Algritom"];
 berplot.multiplot(pd_inpower,Mat,LengendArrary);

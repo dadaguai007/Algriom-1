@@ -36,6 +36,7 @@ classdef DataProcessor < handle
             obj.Nr.k=1;% 默认为1 ，不变， 选取全部信号时，在函数中更改,此项控制信号的解码，均衡范围
             obj.Nr.CL=0.2;% 削波比例
             obj.Button.Clipping='off';% 默认为不削波
+            obj.Button.Display='on';% 默认打开显示
         end
 
         % 参考信号(解码使用)
@@ -191,7 +192,10 @@ classdef DataProcessor < handle
             [ber,num,~] = Calc_BER(qam_bit,ref_seq);
             % 比特数量
             L = min(length(qam_bit),length(ref_seq));
-            fprintf('Num of Errors = %d, BER = %1.7f\n',num,ber);
+
+            if strcmp(obj.Button.Display,'on')
+                fprintf('Num of Errors = %d, BER = %1.7f\n',num,ber);
+            end
         end
 
         % 信号接收
@@ -230,7 +234,7 @@ classdef DataProcessor < handle
 
             % 并串转换
             data_ofdm=data_ofdm(:); % 输出为QAM信号向量，不进行判决
-            data_ofdm = data_ofdm./sqrt(mean(abs(data_ofdm(:)).^2));
+%             data_ofdm = data_ofdm./sqrt(mean(abs(data_ofdm(:)).^2));
         end
 
         % ZF信道均衡

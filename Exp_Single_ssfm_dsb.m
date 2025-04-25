@@ -19,7 +19,7 @@ OFDM_generation;
 PRE='SSFM_DSB_10dBm_Dither_Amp_';
 
 % 存储按钮
-Button_save= 'on';
+Button_save= 'off';
 
 Amp_NUM=300;
 % 装载数据保存模块
@@ -38,7 +38,8 @@ for i=length(Amp_NUM)
     addpath(Filename)
     load('pd_inpower.mat')
     pre='ROP-';
-    for j=1:length(pd_inpower)
+%     for j=1:length(pd_inpower)
+    for j=12    
         % 对输入光功率近似，取整数值
         power = sprintf('%.1f.mat', pd_inpower(j));
         % 读取输入数据
@@ -91,6 +92,7 @@ for i=length(Amp_NUM)
         % 创建变量
         Total=0;
         Num=0;
+        Receive.Button.Display='off';
         for Idx=1:length(Index_P)
             % 序列号
             Receive.Nr.squ_num=Idx;

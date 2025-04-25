@@ -16,24 +16,25 @@ addpath("GUI\")
 OFDM_generation;
 
 % 存储数据的位置信息
-PRE='SSFM_CSPR_';
+PRE='SSFM_DSB_10dBm_Itera_Dither_Amp_';
 
-Button_save= 'off';
-CSPR_NUM=10;
+% 存储按钮
+Button_save= 'on';
 
+Amp_NUM=300;
 % 装载数据保存模块
 ds=DataSaver([], [],[]);
 % 装载GUI界面
-WB = OCG_WaitBar(length(CSPR_NUM));
+WB = OCG_WaitBar(length(Amp_NUM));
 
 
-for i=length(CSPR_NUM)
+for i=1:length(Amp_NUM)
     % 生成数据存储位置
-    Title=strcat(PRE,num2str(CSPR_NUM(i)));
+    Title=strcat(PRE,num2str(Amp_NUM(i)));
     ds.filePath = strcat('Output\',Title);
     ds.createFolder();
     % 加入数据文件位置
-    Filename=strcat('D:\PhD\Project\单边带光发射机自适应偏压控制\Exp\ofdm_dd_ber_64G_18GBaud_20GBaud\Data\20240522_ofdm_64G_20G_SSB_BTB_ssb_ssfm_',num2str(CSPR_NUM(i)),'dBm\');
+    Filename=strcat('D:\PhD\Project\单边带光发射机自适应偏压控制\Exp\ofdm_dd_ber_64G_18GBaud_20GBaud\Data\20240523_ofdm_64G_20G_SSB_BTB_ssb_ssfm_dsb_',num2str(Amp_NUM(i)),'mv_10dBm\');
     addpath(Filename)
     load('pd_inpower.mat')
     pre='ROP-';
@@ -86,7 +87,23 @@ for i=length(CSPR_NUM)
         [ber,num,L]=Receive.Direcct_Cal_BER(data_ofdm_Total);
 
         berTotal(j)=ber;
-        % 分组 处理
+        
+        % 提取光电流
+        Receive.Button.select_photocurrentSignal = 'on';
+        % 同步
+        [~,~,selectedPhotoCurrentSignal]=Receive.Synchronization(Rxsig);
+        % 迭代算法
+        alpha=0.02;
+        ipd=selectedPhotoCurrentSignal;
+        % 迭代后的光电流
+        pd_current=iterative_Beat_Elimination(selectedPortionTotal,real(mean(selectedPortionTotal)),ipd,alpha,64e9,0.05);
+
+        % KK算法
+        [Rxsig_After,Dc]=Receive.Preprocessed_signal(pd_current);
+        % 数据分组
+        PhotoCurrentGroup=Receive.getGroup(Rxsig_After,Index_P);
+        
+        % 分组解码
         % 创建变量
         Total=0;
         Num=0;
@@ -100,7 +117,7 @@ for i=length(CSPR_NUM)
             % 重新生成 DSP 所需的 训练矩阵
             Receive.createReferenceSignal_matrix();
 
-            selectedPortion=Receive.selectSignal(Index_P,DataGroup);
+            selectedPortion=Receive.selectSignal(Index_P,PhotoCurrentGroup);
             % 均衡解码
             [signal_ofdm_martix,data_ofdm_martix,Hf,data_ofdm] = Receive.OFDM_ExecuteDecoding(selectedPortion);
             % 比特判决

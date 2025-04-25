@@ -16,24 +16,25 @@ addpath("GUI\")
 OFDM_generation;
 
 % 存储数据的位置信息
-PRE='SSFM_CSPR_';
+PRE='SSFM_DSB_10dBm_Dither_Amp_';
 
-Button_save= 'off';
-CSPR_NUM=10;
+% 存储按钮
+Button_save= 'on';
 
+Amp_NUM=300;
 % 装载数据保存模块
 ds=DataSaver([], [],[]);
 % 装载GUI界面
-WB = OCG_WaitBar(length(CSPR_NUM));
+WB = OCG_WaitBar(length(Amp_NUM));
 
 
-for i=length(CSPR_NUM)
+for i=length(Amp_NUM)
     % 生成数据存储位置
-    Title=strcat(PRE,num2str(CSPR_NUM(i)));
+    Title=strcat(PRE,num2str(Amp_NUM(i)));
     ds.filePath = strcat('Output\',Title);
     ds.createFolder();
     % 加入数据文件位置
-    Filename=strcat('D:\PhD\Project\单边带光发射机自适应偏压控制\Exp\ofdm_dd_ber_64G_18GBaud_20GBaud\Data\20240522_ofdm_64G_20G_SSB_BTB_ssb_ssfm_',num2str(CSPR_NUM(i)),'dBm\');
+    Filename=strcat('D:\PhD\Project\单边带光发射机自适应偏压控制\Exp\ofdm_dd_ber_64G_18GBaud_20GBaud\Data\20240523_ofdm_64G_20G_SSB_BTB_ssb_ssfm_dsb_',num2str(Amp_NUM(i)),'mv_10dBm\');
     addpath(Filename)
     load('pd_inpower.mat')
     pre='ROP-';

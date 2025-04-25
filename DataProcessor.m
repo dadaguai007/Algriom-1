@@ -100,6 +100,7 @@ classdef DataProcessor < handle
             % 数据进行存储
             DataGroup = cell(1, length(Index_P));
             for Idx=1:length(Index_P)
+               
                 Data = DeWaveform(Index_P(Idx):Index_P(Idx)+obj.TxPHY.len-1);
                 DataGroup{Idx} = Data;
             end
@@ -118,12 +119,26 @@ classdef DataProcessor < handle
             obj.createReferenceSignal_matrix();
         end
 
+        % 对数据进行分组
+        function   DataGroup=getGroup(obj,Rxsig,Index_P)
+            % 数据进行存储
+            DataGroup = cell(1, length(Index_P));
+            for Idx=1:length(Index_P)
+                Data = Rxsig(obj.TxPHY.len*(Idx-1)+1:obj.TxPHY.len*Idx);
+                DataGroup{Idx} = Data;
+            end
+        end
+
 
         % 纠正同步点位置
         function Index_P=getSyncPoint(obj,P,DeWaveform)
 
-            for i=1:length(P)
-                Index_P(i)=P(1)+(i-1)*obj.TxPHY.len;
+            x1=floor(P(1)/(obj.TxPHY.len));
+            x2=floor((length(DeWaveform)-P(1))/(obj.TxPHY.len));
+            Index_P=Cal_Index_sym_P(x1,x2,obj.TxPHY.len,P);
+
+
+            for i=1:length(Index_P)
                 % 判断每组数据是否超出范围
                 if Index_P(i)+obj.TxPHY.len-1>length(DeWaveform)
                     warning('某一组数据长度超出接收范围');
@@ -215,7 +230,7 @@ classdef DataProcessor < handle
 
             % 并串转换
             data_ofdm=data_ofdm(:); % 输出为QAM信号向量，不进行判决
-            %data_ofdm = data_ofdm./sqrt(mean(abs(data_ofdm(:)).^2));
+            data_ofdm = data_ofdm./sqrt(mean(abs(data_ofdm(:)).^2));
         end
 
         % ZF信道均衡
@@ -267,14 +282,14 @@ classdef DataProcessor < handle
             % 对OFDM符号的相位偏差估计
             freqOffset=zeros(size(qam_signal_mat,2),1);
             for j=1:size(qam_signal_mat,2)
-                K=zeros((obj.Nr.nTrainCarrier),1);
-                M=zeros((obj.Nr.nTrainCarrier),1);
+                K=zeros((obj.Nr.nTrainCarrier),size(qam_signal_mat,2));
+                M=zeros((obj.Nr.nTrainCarrier),size(qam_signal_mat,2));
                 for i=1:obj.Nr.nTrainCarrier
-                    K(j)=i*phi(i,j);
-                    M(j)=i.^2;
+                    K(i,j)=i*phi(i,j);
+                    M(i,j)=i.^2;
                 end
                 % 升成每个符号的频偏估计量
-                freqOffset(j)=sum(K)./sum(M);
+                freqOffset(j)=sum(K(:,j))./sum(M(:,j));
             end
         end
 

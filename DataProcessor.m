@@ -37,6 +37,7 @@ classdef DataProcessor < handle
             obj.Nr.CL=0.2;% 削波比例
             obj.Button.Clipping='off';% 默认为不削波
             obj.Button.Display='on';% 默认打开显示
+            obj.Button.Remod='off'; % 重新调制
         end
 
         % 参考信号(解码使用)
@@ -230,8 +231,11 @@ classdef DataProcessor < handle
             data_ofdm_martix=data_ofdm;
 
             % 去除发射机异常频点（载波）
-            data_ofdm(obj.signalPHY.errSub,:)=[];
-
+            if  strcmp(obj.Button.Remod,'off')
+                data_ofdm(obj.signalPHY.errSub,:)=[];
+            elseif strcmp(obj.Button.Remod,'on')
+                data_ofdm(obj.signalPHY.errSub,:)=obj.Implementation.qam_signal(obj.signalPHY.errSub,:);
+            end
             % 并串转换
             data_ofdm=data_ofdm(:); % 输出为QAM信号向量，不进行判决
 %             data_ofdm = data_ofdm./sqrt(mean(abs(data_ofdm(:)).^2));

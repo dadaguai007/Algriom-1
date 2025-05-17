@@ -1,4 +1,4 @@
-function out = Creat_dither(SampleRate,SignalFrequency,N)
+function out = Creat_dither_phi1(SampleRate,SignalFrequency,N,phi)
 
 % 设置采样率和信号频率
 % SampleRate = 60e9; % 采样率为60 Hz
@@ -26,7 +26,7 @@ fs = round(SampleRate / df);
 t = (t0:T-1) * dt;
 % 生成正弦信号
 amplitude = 1; % 振幅为1
-out = amplitude * cos(2 * pi * SignalFrequency * t);
+out = amplitude * sin(2 * pi * SignalFrequency * t+phi);
 
 
 end

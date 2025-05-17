@@ -39,7 +39,7 @@ for i=1:length(Amp_NUM)
     load('pd_inpower.mat')
     pre='ROP-';
     %     for j=1:length(pd_inpower)
-    for j=12
+    for j=10
         % 对输入光功率近似，取整数值
         power = sprintf('%.1f.mat', pd_inpower(j));
         % 读取输入数据

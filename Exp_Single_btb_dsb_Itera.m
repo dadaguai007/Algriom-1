@@ -16,7 +16,7 @@ addpath("GUI\")
 OFDM_generation;
 
 % 存储数据的位置信息
-PRE='DSB_Dither_Amp_';
+PRE='DSB_Dither_Itera_Amp_';
 Button_save= 'off';
 
 Amp_NUM=100;
@@ -36,7 +36,7 @@ for i=length(Amp_NUM)
     load('pd_inpower.mat')
     pre='ROP-';
     %for j=1:length(pd_inpower)
-    for j=12    
+    for j=12
         % 对输入光功率近似，取整数值
         power = sprintf('%.1f.mat', pd_inpower(j));
         % 读取输入数据
@@ -78,40 +78,76 @@ for i=length(Amp_NUM)
         % 同步
         [DataGroup,Index_P,selectedPortionTotal]=Receive.Synchronization(Rxsig);
         % 训练序列
-        Receive.Nr.nTrainSym =  50*10;
+        Receive.Nr.nTrainSym =  500;
         % 均衡解码
         [~,~,~,data_ofdm_Total] = Receive.OFDM_ExecuteDecoding(selectedPortionTotal);
         % 比特判决
         [ber,num,L]=Receive.Direcct_Cal_BER(data_ofdm_Total);
 
         berTotal(j)=ber;
-        % 分组 处理
-        % 创建变量
-        Total=0;
-        Num=0;
-        Receive.Button.Display='off';
-        for Idx=1:length(Index_P)
-            % 序列号
-            Receive.Nr.squ_num=Idx;
-            % 每次都是选取一段进行处理
-            Receive.Nr.k=1;
-            % 训练序列进行纠正
-            Receive.Nr.nTrainSym =  100;
+        % 提取光电流
+        Receive.Button.select_photocurrentSignal = 'on';
+        % 同步
+        [~,~,selectedPhotoCurrentSignal]=Receive.Synchronization(Rxsig);
+        % 迭代算法
+        alpha=0.02;
+        ipd=selectedPhotoCurrentSignal;
+        for idx= 1:5
+            % 迭代后的光电流
+            pd_current=iterative_Beat_Elimination(selectedPortionTotal,mean(selectedPortionTotal),ipd,alpha,64e9,0.02);
+
+            % KK算法
+            [Rxsig_After,~]=Receive.Preprocessed_signal(pd_current);
+            % 数据分组
+            PhotoCurrentGroup=Receive.getGroup(Rxsig_After,Index_P);
+
+
+            % 更新ipd
+            ipd=pd_current;
+            selectedPortionTotal=Rxsig_After;
+            Receive.Button.Display='on';
+            Receive.Nr.k=length(Index_P);
+            Receive.Nr.nTrainSym =  1000;
             % 重新生成 DSP 所需的 训练矩阵
             Receive.createReferenceSignal_matrix();
-
-            selectedPortion=Receive.selectSignal(Index_P,DataGroup);
             % 均衡解码
-            [signal_ofdm_martix,data_ofdm_martix,Hf,data_ofdm] = Receive.OFDM_ExecuteDecoding(selectedPortion);
+            [~,~,~,data_ofdm_total] = Receive.OFDM_ExecuteDecoding(selectedPortionTotal);
             % 比特判决
-            [ber,num,L]=Receive.Direcct_Cal_BER(data_ofdm);
-            Num=Num+num;
-            Total=Total+L;
-        end
-        BER=Num/Total;
-        fprintf('Total Num of Errors = %d, BER = %1.7f\n',Num,BER);
-        BER_ALL(j)=BER;
 
+            [ber1,num1,L1]=Receive.Direcct_Cal_BER(data_ofdm_total);
+
+            % 分组解码
+            % 创建变量
+            Total=0;
+            Num=0;
+            Receive.Button.Display='off';
+            for Idx=1:length(Index_P)
+                % 序列号
+                Receive.Nr.squ_num=Idx;
+                % 每次都是选取一段进行处理
+                Receive.Nr.k=1;
+                % 训练序列进行纠正
+                Receive.Nr.nTrainSym =  100;
+                % 重新生成 DSP 所需的 训练矩阵
+                Receive.createReferenceSignal_matrix();
+
+                selectedPortion=Receive.selectSignal(Index_P,PhotoCurrentGroup);
+
+                % 均衡解码
+                [signal_ofdm_martix,data_ofdm_martix,Hf,data_ofdm] = Receive.OFDM_ExecuteDecoding(selectedPortion);
+                % 比特判决
+
+                [ber,num,L]=Receive.Direcct_Cal_BER(data_ofdm);
+                Num=Num+num;
+                Total=Total+L;
+
+            end
+            BER=Num/Total;
+            fprintf('Total Num of Errors = %d, BER = %1.7f\n',Num,BER);
+            BER_ALL(idx)=BER;
+
+        end
+        Itera_BER(j)=min(BER_ALL);
     end
 
     % 输入光功率
@@ -120,7 +156,7 @@ for i=length(Amp_NUM)
     % 是否进行存储
     if strcmp(Button_save,'on')
         ds.name='BER';
-        ds.data=BER_ALL;
+        ds.data=Itera_BER;
         ds.saveToMat();
 
 
@@ -135,17 +171,3 @@ for i=length(Amp_NUM)
 end
 WB.closeWaitBar();
 
-
-% BER 绘图
-berplot = BERPlot_David();
-berplot.interval=2;
-berplot.flagThreshold=1;
-berplot.flagRedraw=1;
-berplot.flagAddLegend=1;
-Mat=[BER_ALL;berTotal];
-% LengendArrary=["100mv",...
-%     "200mv","300mv",...
-%     "400mv","500mv"];
-LengendArrary=["Group",...
-    "Total"];
-berplot.multiplot(pd_inpower,Mat,LengendArrary);
